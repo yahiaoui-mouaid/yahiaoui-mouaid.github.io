@@ -10,7 +10,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
 
 <style>
   :root{
@@ -150,13 +149,6 @@
   .project-tech-stack{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px;}
   .project-tech-tag{font-family:var(--font-mono); font-size:.7rem; font-weight:600; padding:5px 11px; border-radius:20px; background:rgba(var(--teal-rgb),.1); color:var(--teal); border:1px solid rgba(var(--teal-rgb),.25);}
 
-  .cluster-panel{border-top:1px solid var(--line); padding-top:22px; margin-top:6px;}
-  .cluster-head{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:6px;}
-  .cluster-title{font-family:var(--font-mono); font-size:.72rem; letter-spacing:.05em; color:var(--ink-mute); text-transform:uppercase;}
-  .cluster-caption{font-family:var(--font-mono); font-size:.72rem; color:var(--ink-dim); margin-bottom:10px; min-height:1.2em;}
-  .cluster-hint{font-family:var(--font-mono); font-size:.68rem; color:var(--ink-mute); margin-top:8px; display:flex; align-items:center; gap:6px;}
-  .plotbox{width:100%; height:340px;}
-
   .project-highlights{list-style:none; display:grid; gap:8px; margin-top:20px;}
   .project-highlights li{font-size:.88rem; color:var(--ink-dim); padding-left:20px; position:relative;}
   .project-highlights li::before{content:'—'; position:absolute; left:0; color:var(--amber);}
@@ -179,7 +171,6 @@
     .readout-grid{grid-template-columns:1fr 1fr;}
     section{padding:80px 0;}
     .project-card{padding:24px;}
-    .plotbox{height:280px;}
   }
 </style>
 </head>
@@ -198,7 +189,7 @@
       <li><a href="#projects">Projects</a></li>
       <li><a href="#contact">Contact</a></li>
     </ul>
-    <button class="theme-toggle" id="themeToggle" aria-label="Switch day/night dataset"><i class="fa-solid fa-moon"></i></button>
+    <button class="theme-toggle" id="themeToggle" aria-label="Switch day/night theme"><i class="fa-solid fa-moon"></i></button>
   </div>
 </nav>
 
@@ -312,7 +303,7 @@
   <div class="container">
     <p class="eyebrow reveal">Signal 05</p>
     <h2 class="section-title reveal">Featured work</h2>
-    <p class="section-desc reveal">Each card below carries a live 3D scatter of a dataset from the project — drag to rotate, and flip the toggle in the nav to swap between day and night datasets.</p>
+    <p class="section-desc reveal">Selected projects that combine statistical thinking with practical software development.</p>
     <div class="projects-grid">
 
       <div class="project-card reveal">
@@ -329,14 +320,12 @@
           <li>Authentication and authorization via <strong>Djoser</strong> with <strong>JSON Web Tokens</strong></li>
           <li>RESTful API design following scalability and maintainability best practices</li>
         </ul>
+      </div>
 
       <div class="project-card reveal">
         <div class="project-header">
           <h3>🛒 Full-Stack E-Commerce Platform</h3>
-          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <span style="font-family:var(--font-mono); background:rgba(var(--amber-rgb),.14); color:var(--amber); border:1px solid rgba(var(--amber-rgb),.3); font-weight:600; font-size:.68rem; padding:5px 10px; border-radius:20px;">For sale</span>
-            <a href="https://techvault-c5xs.onrender.com/" target="_blank" rel="noopener" class="proj-link"><i class="fa-solid fa-arrow-up-right-from-square"></i> Live demo</a>
-          </div>
+          <a href="https://techvault-c5xs.onrender.com/" target="_blank" rel="noopener" class="proj-link"><i class="fa-solid fa-arrow-up-right-from-square"></i> Live demo</a>
         </div>
         <p class="project-desc">A complete <strong>online shopping platform</strong> built with Django and Django REST Framework, JWT authentication, product catalog, cart, and admin dashboard. <strong>Deployed live on Render</strong> and available as a ready-to-use e-commerce solution.</p>
         <div class="project-tech-stack">
@@ -347,6 +336,7 @@
           <li>Admin dashboard for managing products, orders, and users</li>
           <li>Codebase built for customization or white-labeling</li>
         </ul>
+      </div>
 
     </div>
   </div>
@@ -523,126 +513,13 @@ if (reduceMotion){
 
 window.addEventListener('resize', () => { resizeCanvas(); }, { passive:true });
 
-/* ============================================================
-   STATE STORE (Zustand-style) — drives theme + which dataset shows
-   ============================================================ */
-const store = (() => {
-  let state = { theme: 'night' };
-  const subs = new Set();
-  return {
-    get: () => state,
-    set: patch => { state = { ...state, ...patch }; subs.forEach(fn => fn(state)); },
-    subscribe: fn => subs.add(fn)
-  };
-})();
-
-function gauss(center, spread){
-  return center + (Math.random()+Math.random()+Math.random()-1.5) * spread;
-}
-function makeCluster(cx,cy,cz,spread,n,label,color){
-  const x=[],y=[],z=[];
-  for(let i=0;i<n;i++){ x.push(gauss(cx,spread)); y.push(gauss(cy,spread)); z.push(gauss(cz,spread)); }
-  return { x,y,z, mode:'markers', type:'scatter3d', name:label,
-    marker:{ size:4, color, opacity:.85, line:{width:0} } };
-}
-
-const CLUSTER_COLORS = ['#5eead4','#fbbf24','#fb7185'];
-
-const limonSets = {
-  day: {
-    label: 'Lunch service · n=90',
-    traces: [
-      makeCluster(8,2,7,0.8,30,'Appetizers',CLUSTER_COLORS[0]),
-      makeCluster(15,4,19,1.1,30,'Mains',CLUSTER_COLORS[1]),
-      makeCluster(5,1,10,0.6,30,'Desserts',CLUSTER_COLORS[2])
-    ],
-    axes: ['Items / order','Prep complexity','Order value ($)']
-  },
-  night: {
-    label: 'Dinner service · n=90',
-    traces: [
-      makeCluster(10,3,10,1.0,30,'Appetizers',CLUSTER_COLORS[0]),
-      makeCluster(23,6,35,1.6,30,'Mains',CLUSTER_COLORS[1]),
-      makeCluster(9,2,15,0.9,30,'Desserts',CLUSTER_COLORS[2])
-    ],
-    axes: ['Items / order','Prep complexity','Order value ($)']
-  }
-};
-
-const shopSets = {
-  day: {
-    label: 'New visitors · n=90',
-    traces: [
-      makeCluster(2,3,15,0.7,30,'Budget',CLUSTER_COLORS[0]),
-      makeCluster(5,7,45,1.3,30,'Regular',CLUSTER_COLORS[1]),
-      makeCluster(9,12,120,2.4,30,'Premium',CLUSTER_COLORS[2])
-    ],
-    axes: ['Session (min)','Pages viewed','Cart value ($)']
-  },
-  night: {
-    label: 'Returning customers · n=90',
-    traces: [
-      makeCluster(3,4,22,0.8,30,'Budget',CLUSTER_COLORS[0]),
-      makeCluster(7,10,65,1.6,30,'Regular',CLUSTER_COLORS[1]),
-      makeCluster(13,18,210,3.2,30,'Premium',CLUSTER_COLORS[2])
-    ],
-    axes: ['Session (min)','Pages viewed','Cart value ($)']
-  }
-};
-
-function themeColors(theme){
-  return theme === 'day'
-    ? { ink:'#14201c', dim:'#4b5a53', grid:'#ddd6c2' }
-    : { ink:'#e9efe9', dim:'#8fa39c', grid:'#1d2624' };
-}
-
-function baseLayout(axes, theme){
-  const c = themeColors(theme);
-  return {
-    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
-    font: { family:'JetBrains Mono, monospace', size:10, color:c.dim },
-    margin: { l:0, r:0, t:10, b:0 },
-    legend: { orientation:'h', y:1, x:0, font:{ size:10, color:c.dim } },
-    scene: {
-      xaxis: { title:{text:axes[0], font:{size:10}}, color:c.dim, gridcolor:c.grid, zerolinecolor:c.grid, backgroundcolor:'rgba(0,0,0,0)' },
-      yaxis: { title:{text:axes[1], font:{size:10}}, color:c.dim, gridcolor:c.grid, zerolinecolor:c.grid, backgroundcolor:'rgba(0,0,0,0)' },
-      zaxis: { title:{text:axes[2], font:{size:10}}, color:c.dim, gridcolor:c.grid, zerolinecolor:c.grid, backgroundcolor:'rgba(0,0,0,0)' },
-      camera: { eye:{x:1.5,y:1.5,z:0.9} }
-    }
-  };
-}
-
-let plottedLimon = false, plottedShop = false;
-
-function renderCharts(theme){
-  const dsKey = theme === 'day' ? 'day' : 'night';
-  const lm = limonSets[dsKey], sh = shopSets[dsKey];
-  document.getElementById('limon-caption').textContent = `Dataset: ${lm.label}`;
-  document.getElementById('shop-caption').textContent = `Dataset: ${sh.label}`;
-
-  const opts = { displayModeBar:false, responsive:true };
-  if (!plottedLimon){ Plotly.newPlot('plot-limon', lm.traces, baseLayout(lm.axes, theme), opts); plottedLimon = true; }
-  else { Plotly.react('plot-limon', lm.traces, baseLayout(lm.axes, theme), opts); }
-
-  if (!plottedShop){ Plotly.newPlot('plot-shop', sh.traces, baseLayout(sh.axes, theme), opts); plottedShop = true; }
-  else { Plotly.react('plot-shop', sh.traces, baseLayout(sh.axes, theme), opts); }
-}
-
-store.subscribe(s => renderCharts(s.theme));
-
-/* Initial plot render once the projects section is near viewport */
-const projObserver = new IntersectionObserver(entries => {
-  entries.forEach(e => { if (e.isIntersecting){ renderCharts(store.get().theme); projObserver.disconnect(); } });
-}, { rootMargin: '200px' });
-projObserver.observe(document.getElementById('projects'));
-
 /* ---------------- Theme toggle ---------------- */
+let currentTheme = 'night';
 const themeToggle = document.getElementById('themeToggle');
 themeToggle.addEventListener('click', () => {
-  const next = store.get().theme === 'night' ? 'day' : 'night';
-  document.documentElement.setAttribute('data-theme', next);
-  themeToggle.innerHTML = next === 'day' ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
-  store.set({ theme: next });
+  currentTheme = currentTheme === 'night' ? 'day' : 'night';
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  themeToggle.innerHTML = currentTheme === 'day' ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>';
 });
 
 window.addEventListener('load', () => ScrollTrigger.refresh());
